@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'core/local/preferences.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/recommendation/form/contextual_form_screen.dart';
@@ -24,7 +25,7 @@ class LitoApp extends StatelessWidget {
           tertiary: const Color(0xFF17A589),
         ),
       ),
-      initialRoute: '/onboarding',
+      initialRoute: Preferences.isOnboarded ? '/home' : '/onboarding',
       routes: {
         '/': (context) => const OnboardingScreen(),
         '/onboarding': (context) => const OnboardingScreen(),
