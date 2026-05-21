@@ -30,8 +30,7 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // Keep release unsigned in Gradle; CI/Bitrise will sign APKs in dedicated steps.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
