@@ -21,6 +21,16 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  SensorProvider? _sensorProvider;
+  AlertProvider? _alertProvider;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sensorProvider = context.read<SensorProvider>();
+    _alertProvider = context.read<AlertProvider>();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -37,8 +47,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
-    context.read<SensorProvider>().stopPolling();
-    context.read<AlertProvider>().stopPolling();
+    _sensorProvider?.stopPolling();
+    _alertProvider?.stopPolling();
     super.dispose();
   }
 

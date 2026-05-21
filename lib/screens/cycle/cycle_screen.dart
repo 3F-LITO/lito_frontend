@@ -480,8 +480,8 @@ class _CycleInfo extends StatelessWidget {
           _DetailCard(
             icon: Icons.egg_alt,
             label: 'Jumlah Benur Tebar',
-            value: NumberFormat('#,###', 'id').format(farm.stockingCount) +
-                ' ekor',
+            value:
+                '${NumberFormat('#,###', 'id').format(farm.stockingCount)} ekor',
           ),
           const SizedBox(height: 10),
           _DetailCard(
@@ -968,27 +968,39 @@ class _FeedCostCardState extends State<_FeedCostCard> {
     _future = _compute();
   }
 
+  @override
+  void didUpdateWidget(covariant _FeedCostCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Recompute when parent rebuilds so new feed logs are reflected.
+    _future = _compute();
+  }
+
   Future<_CostResult> _compute() async {
+    // Primary source: API (works on web and mobile).
+    try {
+      final resp = await DioClient.instance.get('/feed-cost/${widget.farmId}/');
+      if (resp.statusCode == 200 && resp.data != null) {
+        final d = resp.data as Map<String, dynamic>;
+        final cost = d['total_cost'] != null
+            ? (d['total_cost'] as num).toDouble()
+            : null;
+        return _CostResult(
+          totalCost: cost,
+          daysWithPrice: (d['sessions_with_price'] as num? ?? 0).toInt(),
+          totalSessions: (d['total_sessions'] as num? ?? 0).toInt(),
+        );
+      }
+    } catch (_) {}
+
+    // Fallback source for mobile offline scenario.
     if (kIsWeb) {
-      // Web: SQLite tidak tersedia, ambil dari API
-      try {
-        final resp = await DioClient.instance
-            .get('/feed-cost/${widget.farmId}/');
-        if (resp.statusCode == 200 && resp.data != null) {
-          final d = resp.data as Map<String, dynamic>;
-          final cost = d['total_cost'] != null
-              ? (d['total_cost'] as num).toDouble()
-              : null;
-          return _CostResult(
-            totalCost: cost,
-            daysWithPrice: (d['sessions_with_price'] as num? ?? 0).toInt(),
-            totalSessions: (d['total_sessions'] as num? ?? 0).toInt(),
-          );
-        }
-      } catch (_) {}
       return const _CostResult(
-          totalCost: null, daysWithPrice: 0, totalSessions: 0);
+        totalCost: null,
+        daysWithPrice: 0,
+        totalSessions: 0,
+      );
     }
+
     final rows = await DatabaseHelper.instance.getFeedLogs(widget.farmId);
     final stockingMidnight = DateTime(
       widget.stockingDate.year,

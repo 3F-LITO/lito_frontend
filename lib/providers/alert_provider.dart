@@ -10,6 +10,7 @@ class AlertProvider extends ChangeNotifier {
   List<Alert> _alerts = [];
   bool _isLoading = false;
   Timer? _pollTimer;
+  bool _disposed = false;
 
   /// Semua alert (terbaru pertama).
   List<Alert> get alerts => _alerts;
@@ -45,12 +46,12 @@ class AlertProvider extends ChangeNotifier {
 
   Future<void> _loadAlerts(String farmId) async {
     _isLoading = true;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
 
     _alerts = await _repository.fetchAlerts(farmId);
 
     _isLoading = false;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   /// Tandai alert sebagai dibaca — update lokal dulu, lalu sync ke API.
@@ -71,13 +72,14 @@ class AlertProvider extends ChangeNotifier {
             )
           : a;
     }).toList();
-    notifyListeners();
+    if (!_disposed) notifyListeners();
 
     await _repository.markAsRead(alertId);
   }
 
   @override
   void dispose() {
+    _disposed = true;
     _pollTimer?.cancel();
     super.dispose();
   }

@@ -68,6 +68,7 @@ class _FeedLogBottomSheetState extends State<FeedLogBottomSheet> {
     // Sync ke API (fire-and-forget; gagal = tetap tersimpan lokal)
     try {
       await DioClient.instance.post('/feed-log', data: {
+        'farm_id': farmId,
         'actual_kg': _actualKg,
         'recommended_kg': widget.recommendedKg,
         if (_pricePerKg > 0) 'price_per_kg': _pricePerKg,
@@ -159,8 +160,7 @@ class _FeedLogBottomSheetState extends State<FeedLogBottomSheet> {
               decoration: _decor('cth. 12.5'),
               validator: (v) {
                 if (v == null || v.isEmpty) return 'Wajib diisi';
-                final n =
-                    double.tryParse(v.replaceAll(',', '.'));
+                final n = double.tryParse(v.replaceAll(',', '.'));
                 if (n == null || n <= 0) return 'Masukkan angka > 0';
                 return null;
               },
@@ -170,8 +170,8 @@ class _FeedLogBottomSheetState extends State<FeedLogBottomSheet> {
             // ── Overfeeding warning (live) ────────────────────────
             if (_actualCtrl.text.isNotEmpty && _isOverfeeding)
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFEF3C7),
@@ -227,8 +227,8 @@ class _FeedLogBottomSheetState extends State<FeedLogBottomSheet> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF1D9E75).withAlpha(12),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                      color: const Color(0xFF1D9E75).withAlpha(40)),
+                  border:
+                      Border.all(color: const Color(0xFF1D9E75).withAlpha(40)),
                 ),
                 child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -280,8 +280,7 @@ class _FeedLogBottomSheetState extends State<FeedLogBottomSheet> {
 
   InputDecoration _decor(String hint) => InputDecoration(
         hintText: hint,
-        hintStyle:
-            const TextStyle(color: Color(0xFFD1D5DB), fontSize: 13),
+        hintStyle: const TextStyle(color: Color(0xFFD1D5DB), fontSize: 13),
         filled: true,
         fillColor: Colors.white,
         contentPadding:
@@ -294,8 +293,7 @@ class _FeedLogBottomSheetState extends State<FeedLogBottomSheet> {
             borderSide: BorderSide(color: Colors.grey.shade300)),
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide:
-                const BorderSide(color: Color(0xFF1D9E75), width: 1.5)),
+            borderSide: const BorderSide(color: Color(0xFF1D9E75), width: 1.5)),
         errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(color: Color(0xFFE24B4A))),
@@ -315,4 +313,3 @@ class _Label extends StatelessWidget {
         ),
       );
 }
-
