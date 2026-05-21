@@ -1,13 +1,3 @@
-// class Alert(models.Model):
-//     id = models.UUIDField(primary_key=True, default=uuid4)
-//     farm = models.ForeignKey(Farm, on_delete=models.CASCADE)
-//     timestamp = models.DateTimeField(auto_now_add=True)
-//     parameter = models.CharField(max_length=20)
-//     value = models.FloatField()
-//     urgency = models.CharField(max_length=10)
-//     action_text = models.TextField()
-//     is_read = models.BooleanField(default=False)
-
 class Alert {
   final String id;
   final String farmId;
@@ -34,28 +24,28 @@ class Alert {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'farmId': farmId,
+      'farm_id': farmId,
       'timestamp': timestamp.toIso8601String(),
       'parameter': parameter,
       'value': value,
       'threshold': threshold,
       'urgency': urgency,
-      'actionText': actionText,
-      'isRead': isRead ? 1 : 0, 
+      'action_text': actionText,
+      'is_read': isRead ? 1 : 0,
     };
   }
 
   factory Alert.fromMap(Map<String, dynamic> map) {
     return Alert(
       id: map['id'],
-      farmId: map['farmId'] ?? map['farm_id'] ?? '',
+      farmId: map['farm_id'] ?? map['farm'] ?? '',
       timestamp: DateTime.parse(map['timestamp']),
       parameter: map['parameter'],
       value: (map['value'] as num).toDouble(),
       threshold: (map['threshold'] as num).toDouble(),
       urgency: map['urgency'],
-      actionText: map['actionText'] ?? '',
-      isRead: map['isRead'] == 1 || map['is_read'] == true, 
+      actionText: map['action_text'] ?? '',
+      isRead: map['is_read'] == 1 || map['is_read'] == true,
     );
   }
 }

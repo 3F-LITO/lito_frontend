@@ -1,9 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:provider/provider.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'dart:io' show Platform;
+import 'package:provider/provider.dart';
 import 'app.dart';
 import 'core/local/database_helper.dart';
 import 'core/local/preferences.dart';
@@ -16,20 +14,16 @@ import 'providers/connectivity_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inisialisasi sqflite FFI khusus Windows/Linux (macOS & mobile sudah native)
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
+  // sqflite tidak support Flutter Web — skip di platform web
+  if (!kIsWeb) {
+    await DatabaseHelper.instance.database;
   }
 
-  // Inisialisasi cache SQLite lokal
-  await DatabaseHelper.instance.database; 
+  // Inisialisasi locale Indonesia untuk DateFormat & NumberFormat
+  await initializeDateFormatting('id', null);
 
   // Inisialisasi SharedPreferences lokal
   await Preferences.init();
-
-  // Inisialisasi locale data untuk intl (DateFormat, dll)
-  await initializeDateFormatting('id', null);
 
   runApp(
     MultiProvider(
