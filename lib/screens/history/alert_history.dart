@@ -6,7 +6,12 @@ import '../../providers/alert_provider.dart';
 import '../../utils/alert_actions.dart';
 
 class AlertHistory extends StatefulWidget {
-  const AlertHistory({super.key});
+  final bool showOnlyUnread;
+
+  const AlertHistory({
+    super.key,
+    this.showOnlyUnread = false,
+  });
 
   @override
   State<AlertHistory> createState() => _AlertHistoryState();
@@ -26,23 +31,32 @@ class _AlertHistoryState extends State<AlertHistory> {
   Widget build(BuildContext context) {
     return Consumer<AlertProvider>(
       builder: (context, prov, _) {
+        final visibleAlerts = widget.showOnlyUnread
+            ? prov.alerts.where((a) => !a.isRead).toList()
+            : prov.alerts;
+
         if (prov.isLoading && prov.alerts.isEmpty) {
           return const Center(
             child: CircularProgressIndicator(color: Color(0xFF1D9E75)),
           );
         }
 
-        if (prov.alerts.isEmpty) {
-          return const Center(
+        if (visibleAlerts.isEmpty) {
+          return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.notifications_none,
+                const Icon(Icons.notifications_none,
                     size: 48, color: Color(0xFFD1D5DB)),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 Text(
-                  'Belum ada peringatan',
-                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+                  widget.showOnlyUnread
+                      ? 'Semua notifikasi sudah dibaca'
+                      : 'Belum ada peringatan',
+                  style: const TextStyle(
+                    color: Color(0xFF6B7280),
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),
@@ -51,9 +65,9 @@ class _AlertHistoryState extends State<AlertHistory> {
 
         return ListView.builder(
           padding: const EdgeInsets.all(16),
-          itemCount: prov.alerts.length,
+          itemCount: visibleAlerts.length,
           itemBuilder: (context, index) {
-            return _AlertCard(alert: prov.alerts[index]);
+            return _AlertCard(alert: visibleAlerts[index]);
           },
         );
       },

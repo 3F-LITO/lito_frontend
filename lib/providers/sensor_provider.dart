@@ -24,6 +24,7 @@ class SensorProvider extends ChangeNotifier {
 
   Timer? _pollTimer;
   String? _activeFarmId;
+  bool _disposed = false;
 
   SensorReading? get latest => _latest;
   SensorReading? get baseline => _baseline;
@@ -48,18 +49,24 @@ class SensorProvider extends ChangeNotifier {
     _pollTimer = null;
   }
 
+  @override
+  void dispose() {
+    _disposed = true;
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
   Future<void> _fetchLatest() async {
     if (_activeFarmId == null) return;
 
     _isLoading = true;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
 
     final result = await _repository.fetchLatestReading(_activeFarmId!);
 
     if (result != null) {
       if (result.isFromCache) {
         _isOffline = true;
-        // Saat offline, latest tetap dari cache; baseline tetap dari history
         _latest ??= result.reading;
       } else {
         _latest = result.reading;
@@ -68,7 +75,7 @@ class SensorProvider extends ChangeNotifier {
     }
 
     _isLoading = false;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> _fetchHistory() async {
@@ -80,14 +87,14 @@ class SensorProvider extends ChangeNotifier {
     // Update baseline: bacaan paling mendekati 30 menit lalu
     _baseline = TrendCalculator.findBaseline(_history, minutesAgo: 30);
 
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   /// Muat riwayat 24 jam untuk halaman ParameterHistoryScreen (F2.4).
   Future<void> loadHistory24h() async {
     if (_activeFarmId == null) return;
     _isLoading24h = true;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
 
     _history24h = await _repository.fetchHistoryReadings(
       _activeFarmId!,
@@ -95,12 +102,6 @@ class SensorProvider extends ChangeNotifier {
     );
 
     _isLoading24h = false;
-    notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _pollTimer?.cancel();
-    super.dispose();
+    if (!_disposed) notifyListeners();
   }
 }

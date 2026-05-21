@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../core/local/database_helper.dart';
+import '../../core/network/dio_client.dart';
 import '../../models/farm.dart';
+import '../../models/feed_log.dart';
 import '../../providers/farm_provider.dart';
 import '../../utils/cycle_calculator.dart';
 
@@ -476,8 +480,8 @@ class _CycleInfo extends StatelessWidget {
           _DetailCard(
             icon: Icons.egg_alt,
             label: 'Jumlah Benur Tebar',
-            value: NumberFormat('#,###', 'id').format(farm.stockingCount) +
-                ' ekor',
+            value:
+                '${NumberFormat('#,###', 'id').format(farm.stockingCount)} ekor',
           ),
           const SizedBox(height: 10),
           _DetailCard(
@@ -489,7 +493,10 @@ class _CycleInfo extends StatelessWidget {
           const SizedBox(height: 16),
 
           // ── Estimasi Berat (F4.4) ─────────────────────────────────────
-          _WeightEstimateCard(doc: doc),
+          _WeightEstimateCard(doc: doc), const SizedBox(height: 16),
+
+          // ── Estimasi Biaya Pakan (F1.9) ────────────────────────────────
+          _FeedCostCard(farmId: farm.id, stockingDate: farm.stockingDate),
           const SizedBox(height: 32),
 
           // ── Mulai Siklus Baru ─────────────────────────────────────────
@@ -939,4 +946,175 @@ class _DetailCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// ─── Feed Cost Estimate Card (F1.9) ────────────────────────────────────────────────────
+
+class _FeedCostCard extends StatefulWidget {
+  final String farmId;
+  final DateTime stockingDate;
+  const _FeedCostCard({required this.farmId, required this.stockingDate});
+
+  @override
+  State<_FeedCostCard> createState() => _FeedCostCardState();
+}
+
+class _FeedCostCardState extends State<_FeedCostCard> {
+  late Future<_CostResult> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _compute();
+  }
+
+  @override
+  void didUpdateWidget(covariant _FeedCostCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Recompute when parent rebuilds so new feed logs are reflected.
+    _future = _compute();
+  }
+
+  Future<_CostResult> _compute() async {
+    // Primary source: API (works on web and mobile).
+    try {
+      final resp = await DioClient.instance.get('/feed-cost/${widget.farmId}/');
+      if (resp.statusCode == 200 && resp.data != null) {
+        final d = resp.data as Map<String, dynamic>;
+        final cost = d['total_cost'] != null
+            ? (d['total_cost'] as num).toDouble()
+            : null;
+        return _CostResult(
+          totalCost: cost,
+          daysWithPrice: (d['sessions_with_price'] as num? ?? 0).toInt(),
+          totalSessions: (d['total_sessions'] as num? ?? 0).toInt(),
+        );
+      }
+    } catch (_) {}
+
+    // Fallback source for mobile offline scenario.
+    if (kIsWeb) {
+      return const _CostResult(
+        totalCost: null,
+        daysWithPrice: 0,
+        totalSessions: 0,
+      );
+    }
+
+    final rows = await DatabaseHelper.instance.getFeedLogs(widget.farmId);
+    final stockingMidnight = DateTime(
+      widget.stockingDate.year,
+      widget.stockingDate.month,
+      widget.stockingDate.day,
+    );
+    final relevant = rows
+        .map((r) => FeedLog.fromMap(r))
+        .where((l) => !l.timestamp.isBefore(stockingMidnight))
+        .toList();
+    final withPrice = relevant.where((l) => l.pricePerKg > 0).toList();
+    if (withPrice.isEmpty) {
+      return _CostResult(
+          totalCost: null, daysWithPrice: 0, totalSessions: relevant.length);
+    }
+    final total =
+        withPrice.fold(0.0, (sum, l) => sum + l.actualKg * l.pricePerKg);
+    return _CostResult(
+      totalCost: total,
+      daysWithPrice: withPrice.length,
+      totalSessions: relevant.length,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<_CostResult>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+        final result = snapshot.data!;
+        final hasCost = result.totalCost != null;
+        final formatter = NumberFormat.currency(
+          locale: 'id',
+          symbol: 'Rp ',
+          decimalDigits: 0,
+        );
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: hasCost ? const Color(0xFFF0FDF4) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: hasCost
+                  ? const Color(0xFF1D9E75).withAlpha(60)
+                  : Colors.grey.shade100,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Text('💰', style: TextStyle(fontSize: 18)),
+                  SizedBox(width: 8),
+                  Text(
+                    'Estimasi Total Biaya Pakan',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              if (hasCost) ...[
+                Text(
+                  formatter.format(result.totalCost),
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF1D9E75),
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Berdasarkan ${result.daysWithPrice} dari ${result.totalSessions} sesi dengan harga yang dicatat',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF6B7280),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ] else ...[
+                Text(
+                  result.totalSessions == 0
+                      ? 'Belum ada catatan pakan untuk siklus ini.'
+                      : 'Tambahkan harga pakan di "Catat Pakan" untuk melihat estimasi biaya.',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF9CA3AF),
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CostResult {
+  final double? totalCost;
+  final int daysWithPrice;
+  final int totalSessions;
+  const _CostResult({
+    required this.totalCost,
+    required this.daysWithPrice,
+    required this.totalSessions,
+  });
 }

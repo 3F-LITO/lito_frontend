@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../core/local/database_helper.dart';
+import '../../core/local/preferences.dart';
 import '../../models/recommendation.dart';
 import '../../providers/recommendation_provider.dart';
 
@@ -12,12 +15,23 @@ class RecommendationHistory extends StatefulWidget {
 }
 
 class _RecommendationHistoryState extends State<RecommendationHistory> {
+  double _totalFeedCost = 0;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<RecommendationProvider>().loadHistory();
+      _loadTotalCost();
     });
+  }
+
+  Future<void> _loadTotalCost() async {
+    if (kIsWeb) return; // sqflite tidak support web
+    final farmId = Preferences.activeFarmId;
+    if (farmId == null) return;
+    final total = await DatabaseHelper.instance.getTotalFeedCost(farmId);
+    if (mounted) setState(() => _totalFeedCost = total);
   }
 
   @override
@@ -55,16 +69,55 @@ class _RecommendationHistoryState extends State<RecommendationHistory> {
 
         return RefreshIndicator(
           color: const Color(0xFF1D9E75),
-          onRefresh: () => context.read<RecommendationProvider>().loadHistory(),
+          onRefresh: () async {
+            await context.read<RecommendationProvider>().loadHistory();
+            await _loadTotalCost();
+          },
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: provider.history.length,
+            itemCount: provider.history.length + 1,
             itemBuilder: (context, index) {
-              return _RecommendationCard(rec: provider.history[index]);
+              if (index == 0) {
+                return _buildCostBanner();
+              }
+              return _RecommendationCard(rec: provider.history[index - 1]);
             },
           ),
         );
       },
+    );
+  }
+
+  Widget _buildCostBanner() {
+    if (_totalFeedCost <= 0) return const SizedBox.shrink();
+    final formatted = _totalFeedCost.toStringAsFixed(0).replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1D9E75).withAlpha(12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF1D9E75).withAlpha(40)),
+      ),
+      child: Row(children: [
+        const Icon(Icons.payments_outlined, color: Color(0xFF1D9E75), size: 22),
+        const SizedBox(width: 12),
+        const Expanded(
+          child: Text(
+            'Total Estimasi Biaya Pakan Siklus',
+            style: TextStyle(fontSize: 12, color: Color(0xFF374151)),
+          ),
+        ),
+        Text(
+          'Rp $formatted',
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF1D9E75),
+          ),
+        ),
+      ]),
     );
   }
 }

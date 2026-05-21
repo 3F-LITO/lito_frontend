@@ -9,7 +9,6 @@ import '../../utils/cycle_calculator.dart';
 import 'widgets/parameter_card.dart';
 import 'widgets/pond_health_score.dart';
 import 'widgets/offline_banner.dart';
-import 'daily_log_bottom_sheet.dart';
 import '../alerts/alert_banner.dart';
 import 'widgets/urgency_label.dart';
 import '../main_screen.dart';
@@ -22,6 +21,52 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  SensorProvider? _sensorProvider;
+  AlertProvider? _alertProvider;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sensorProvider = context.read<SensorProvider>();
+    _alertProvider = context.read<AlertProvider>();
+  }
+
+  Future<void> _goToFarmSelection() async {
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Pilih / Buat Tambak'),
+            content: const Text(
+              'Anda akan keluar dari dashboard untuk memilih atau membuat tambak baru.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Lanjut'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!confirmed || !mounted) return;
+
+    context.read<FarmProvider>().resetCycle();
+    await Preferences.clearActiveFarmId();
+    await Preferences.setOnboarded(false);
+
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/onboarding',
+      (route) => false,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -38,211 +83,216 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
-    context.read<SensorProvider>().stopPolling();
-    context.read<AlertProvider>().stopPolling();
+    _sensorProvider?.stopPolling();
+    _alertProvider?.stopPolling();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        title: const Text(
-          'Dashboard Tambak',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 18,
-            color: Color(0xFF111827),
+    return WillPopScope(
+      onWillPop: () async {
+        await _goToFarmSelection();
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF9FAFB),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          leading: IconButton(
+            tooltip: 'Kembali ke Pilih/Buat Tambak',
+            onPressed: _goToFarmSelection,
+            icon: const Icon(
+              Icons.arrow_back_rounded,
+              color: Color(0xFF1D9E75),
+            ),
+          ),
+          title: const Text(
+            'Dashboard Tambak',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+              color: Color(0xFF111827),
+            ),
+          ),
+          actions: [
+            Consumer<SensorProvider>(
+              builder: (_, sensor, __) {
+                return Consumer<ConnectivityProvider>(
+                  builder: (_, conn, __) {
+                    final isOffline = conn.isOffline;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isOffline
+                              ? Colors.orange.shade50
+                              : Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (isOffline)
+                              const Icon(Icons.wifi_off,
+                                  size: 11, color: Color(0xFFD97706)),
+                            if (!isOffline)
+                              const Icon(Icons.wifi,
+                                  size: 11, color: Color(0xFF1D9E75)),
+                            const SizedBox(width: 4),
+                            Text(
+                              isOffline ? 'OFFLINE' : 'ONLINE',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: isOffline
+                                    ? const Color(0xFFD97706)
+                                    : const Color(0xFF1D9E75),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(1),
+            child: Divider(height: 1, color: Colors.grey.shade100),
           ),
         ),
-        actions: [
-          Consumer<SensorProvider>(
-            builder: (_, sensor, __) {
-              return Consumer<ConnectivityProvider>(
-                builder: (_, conn, __) {
-                  final isOffline = conn.isOffline;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 16),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: isOffline
-                            ? Colors.orange.shade50
-                            : Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+        body: Consumer2<SensorProvider, ConnectivityProvider>(
+          builder: (context, sensor, conn, _) {
+            final isOffline = conn.isOffline || sensor.isOffline;
+
+            return Column(
+              children: [
+                // ── Offline banner ──────────────────────────────────────────
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: isOffline
+                      ? OfflineBanner(
+                          key: const ValueKey('offline'),
+                          cachedAt: sensor.latest?.timestamp,
+                        )
+                      : const SizedBox.shrink(key: ValueKey('online')),
+                ),
+
+                // ── Main content ────────────────────────────────────────────
+                Expanded(
+                  child: RefreshIndicator(
+                    color: const Color(0xFF1D9E75),
+                    onRefresh: () async {
+                      final farmId = Preferences.activeFarmId;
+                      if (farmId != null) {
+                        sensor.startPolling(farmId);
+                      }
+                    },
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (isOffline)
-                            const Icon(Icons.wifi_off,
-                                size: 11, color: Color(0xFFD97706)),
-                          if (!isOffline)
-                            const Icon(Icons.wifi,
-                                size: 11, color: Color(0xFF1D9E75)),
-                          const SizedBox(width: 4),
-                          Text(
-                            isOffline ? 'OFFLINE' : 'ONLINE',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: isOffline
-                                  ? const Color(0xFFD97706)
-                                  : const Color(0xFF1D9E75),
-                            ),
+                          // Alert banner (kritis)
+                          const AlertBanner(),
+
+                          // Skor kesehatan kolam
+                          PondHealthScore(
+                            reading: sensor.latest,
+                            isOffline: isOffline,
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Label status urgensi (F3.2)
+                          const UrgencyLabel(),
+                          const SizedBox(height: 16),
+
+                          // Ringkasan siklus aktif (F4.2–F4.4)
+                          Consumer<FarmProvider>(
+                            builder: (_, farmProv, __) {
+                              if (farmProv.currentFarm == null) {
+                                return const SizedBox.shrink();
+                              }
+                              return Column(
+                                children: [
+                                  _CycleSummaryCard(
+                                    farm: farmProv.currentFarm!,
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+                              );
+                            },
+                          ),
+
+                          // Tombol cek rekomendasi
+                          _QuickActionButton(
+                            onTap: () => Navigator.pushNamed(
+                                context, '/recommendation/contextual'),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // ── Header seksi parameter ────────────────────────
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Parameter Real-Time',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF111827),
+                                ),
+                              ),
+                              if (sensor.isLoading)
+                                SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // ── Grid kartu parameter ──────────────────────────
+                          ParameterCardsGrid(
+                            latest: sensor.latest,
+                            baseline: sensor.baseline,
+                            history: sensor.history,
+                            isOffline: isOffline,
+                          ),
+                          const SizedBox(height: 12),
+
+                          // ── Tombol riwayat parameter 24 jam (F2.4) ────────
+                          _HistoryLinkButton(
+                            onTap: () => Navigator.pushNamed(
+                                context, '/history/parameters'),
+                          ),
+                          const SizedBox(height: 8),
+
+                          // ── Tombol riwayat peringatan (F3.4) ──────────────
+                          _AlertHistoryLinkButton(
+                            onTap: () => MainScreenController.switchTab(1),
                           ),
                         ],
                       ),
                     ),
-                  );
-                },
-              );
-            },
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Divider(height: 1, color: Colors.grey.shade100),
-        ),
-      ),
-      body: Consumer2<SensorProvider, ConnectivityProvider>(
-        builder: (context, sensor, conn, _) {
-          final isOffline = conn.isOffline || sensor.isOffline;
-
-          return Column(
-            children: [
-              // ── Offline banner ──────────────────────────────────────────
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: isOffline
-                    ? OfflineBanner(
-                        key: const ValueKey('offline'),
-                        cachedAt: sensor.latest?.timestamp,
-                      )
-                    : const SizedBox.shrink(key: ValueKey('online')),
-              ),
-
-              // ── Main content ────────────────────────────────────────────
-              Expanded(
-                child: RefreshIndicator(
-                  color: const Color(0xFF1D9E75),
-                  onRefresh: () async {
-                    final farmId = Preferences.activeFarmId;
-                    if (farmId != null) {
-                      sensor.startPolling(farmId);
-                    }
-                  },
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Alert banner (kritis)
-                        const AlertBanner(),
-
-                        // Skor kesehatan kolam
-                        PondHealthScore(
-                          reading: sensor.latest,
-                          isOffline: isOffline,
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Label status urgensi (F3.2)
-                        const UrgencyLabel(),
-                        const SizedBox(height: 16),
-
-                        // Ringkasan siklus aktif (F4.2–F4.4)
-                        Consumer<FarmProvider>(
-                          builder: (_, farmProv, __) {
-                            if (farmProv.currentFarm == null) {
-                              return const SizedBox.shrink();
-                            }
-                            return Column(
-                              children: [
-                                _CycleSummaryCard(farm: farmProv.currentFarm!),
-                                const SizedBox(height: 16),
-                              ],
-                            );
-                          },
-                        ),
-
-                        // Tombol cek rekomendasi
-                        _QuickActionButton(
-                          onTap: () => Navigator.pushNamed(
-                              context, '/recommendation/contextual'),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // ── Header seksi parameter ────────────────────────
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Parameter Real-Time',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF111827),
-                              ),
-                            ),
-                            if (sensor.isLoading)
-                              SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.grey.shade400,
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-
-                        // ── Grid kartu parameter ──────────────────────────
-                        ParameterCardsGrid(
-                          latest: sensor.latest,
-                          baseline: sensor.baseline,
-                          history: sensor.history,
-                          isOffline: isOffline,
-                        ),
-                        const SizedBox(height: 12),
-
-                        // ── Tombol riwayat parameter 24 jam (F2.4) ────────
-                        _HistoryLinkButton(
-                          onTap: () => Navigator.pushNamed(
-                              context, '/history/parameters'),
-                        ),
-                        const SizedBox(height: 8),
-
-                        // ── Tombol riwayat peringatan (F3.4) ──────────────
-                        _AlertHistoryLinkButton(
-                          onTap: () => MainScreenController.switchTab(1),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Tombol catatan harian
-                        _DailyLogButton(
-                          onTap: () => showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) => const DailyLogBottomSheet(),
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -311,44 +361,6 @@ class _QuickActionButton extends StatelessWidget {
               ),
             ),
             const Icon(Icons.chevron_right, color: Color(0xFFD1D5DB), size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Daily log button ─────────────────────────────────────────────────────────
-
-class _DailyLogButton extends StatelessWidget {
-  final VoidCallback onTap;
-  const _DailyLogButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade100),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.edit_note, size: 18, color: Colors.grey.shade500),
-            const SizedBox(width: 8),
-            Text(
-              'Tambah Catatan Harian',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Colors.grey.shade600,
-              ),
-            ),
           ],
         ),
       ),

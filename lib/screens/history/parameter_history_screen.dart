@@ -230,7 +230,7 @@ class _TableRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: _ValCell(
-              label: '${reading.doLevel.toStringAsFixed(1)}',
+              label: reading.doLevel.toStringAsFixed(1),
               isDanger: _isBadVal('do', reading.doLevel),
             ),
           ),
@@ -238,7 +238,7 @@ class _TableRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: _ValCell(
-              label: '${reading.temperature.toStringAsFixed(1)}',
+              label: reading.temperature.toStringAsFixed(1),
               isDanger: _isBadVal('temp', reading.temperature),
             ),
           ),
@@ -246,7 +246,7 @@ class _TableRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: _ValCell(
-              label: '${reading.salinity.toStringAsFixed(1)}',
+              label: reading.salinity.toStringAsFixed(1),
               isDanger: _isBadVal('sal', reading.salinity),
             ),
           ),

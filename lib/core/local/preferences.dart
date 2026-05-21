@@ -32,6 +32,12 @@ class Preferences {
     return _prefs!.getString('active_farm_id');
   }
 
+  // Menghapus ID kolam/tambak aktif saat ini
+  static Future<bool> clearActiveFarmId() async {
+    await init();
+    return await _prefs!.remove('active_farm_id');
+  }
+
   // Menghapus data preferensi lokal
   static Future<void> clear() async {
     await init();

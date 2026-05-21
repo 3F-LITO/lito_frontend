@@ -4,6 +4,7 @@
 /// Fully offline — hardcoded, tidak butuh koneksi internet.
 /// Gunakan [resolveAlertAction] untuk mendapatkan teks tindakan
 /// berdasarkan parameter, urgency, dan nilai sensor.
+library;
 
 // ─── Mapping statis ────────────────────────────────────────────────────────────
 

@@ -2,23 +2,35 @@ class FeedLog {
   final String id;
   final String farmId;
   final DateTime timestamp;
-  final double feedDoseKg;
+  final double recommendedKg;  // dosis rekomendasi ML
+  final double actualKg;        // realisasi aktual (F1.7)
+  final double pricePerKg;      // harga pakan per kg (F1.7)
   final String notes;
 
   FeedLog({
     required this.id,
     required this.farmId,
     required this.timestamp,
-    required this.feedDoseKg,
+    required this.recommendedKg,
+    required this.actualKg,
+    required this.pricePerKg,
     required this.notes,
   });
+
+  /// Total biaya sesi ini (F1.8)
+  double get totalCost => actualKg * pricePerKg;
+
+  /// Alert overfeeding: aktual > rekomendasi + 20% (F1.9)
+  bool get isOverfeeding => recommendedKg > 0 && actualKg > recommendedKg * 1.2;
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'farm_id': farmId,
       'timestamp': timestamp.toIso8601String(),
-      'feed_dose_kg': feedDoseKg,
+      'recommended_kg': recommendedKg,
+      'actual_kg': actualKg,
+      'price_per_kg': pricePerKg,
       'notes': notes,
     };
   }
@@ -28,7 +40,9 @@ class FeedLog {
       id: map['id'],
       farmId: map['farm_id'] ?? map['farm'] ?? '',
       timestamp: DateTime.parse(map['timestamp']),
-      feedDoseKg: (map['feed_dose_kg'] as num).toDouble(),
+      recommendedKg: (map['recommended_kg'] as num? ?? 0).toDouble(),
+      actualKg: (map['actual_kg'] as num? ?? 0).toDouble(),
+      pricePerKg: (map['price_per_kg'] as num? ?? 0).toDouble(),
       notes: map['notes'] ?? '',
     );
   }
