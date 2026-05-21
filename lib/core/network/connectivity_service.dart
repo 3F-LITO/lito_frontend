@@ -1,0 +1,16 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
+
+class ConnectivityService {
+  final Connectivity _connectivity = Connectivity();
+
+  // Memeriksa status koneksi internet aktif saat ini
+  Future<bool> get isConnected async {
+    final List<ConnectivityResult> result = await _connectivity.checkConnectivity();
+    return !result.contains(ConnectivityResult.none);
+  }
+
+  // Stream reaktif untuk mendengarkan perubahan status koneksi
+  Stream<List<ConnectivityResult>> get onConnectivityChanged {
+    return _connectivity.onConnectivityChanged;
+  }
+}
