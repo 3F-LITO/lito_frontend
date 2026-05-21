@@ -9,6 +9,7 @@ class RecommendationProvider extends ChangeNotifier {
   List<Recommendation> _history = [];
   Recommendation? _lastResult;
   bool _isLoading = false;
+  bool _isSubmitting = false;
   String? _error;
 
   // In-progress form data – cleared after successful submission
@@ -18,6 +19,7 @@ class RecommendationProvider extends ChangeNotifier {
   List<Recommendation> get history => _history;
   Recommendation? get lastResult => _lastResult;
   bool get isLoading => _isLoading;
+  bool get isSubmitting => _isSubmitting;
   String? get error => _error;
   Map<String, dynamic> get pendingContextual => _pendingContextual;
   Map<String, dynamic> get pendingParameters => _pendingParameters;
@@ -35,7 +37,7 @@ class RecommendationProvider extends ChangeNotifier {
   /// Submits contextual + parameter data to backend, saves result.
   /// Returns true on success.
   Future<bool> submitRecommendation(String farmId) async {
-    _isLoading = true;
+    _isSubmitting = true;
     _error = null;
     notifyListeners();
 
@@ -52,12 +54,13 @@ class RecommendationProvider extends ChangeNotifier {
       _history.insert(0, result);
       _pendingContextual = {};
       _pendingParameters = {};
-      _isLoading = false;
+      _isSubmitting = false;
       notifyListeners();
       return true;
     } else {
-      _error = 'Gagal mendapatkan rekomendasi. Periksa koneksi internet dan pastikan backend berjalan.';
-      _isLoading = false;
+      _error =
+          'Gagal mendapatkan rekomendasi. Periksa koneksi internet dan pastikan backend berjalan.';
+      _isSubmitting = false;
       notifyListeners();
       return false;
     }

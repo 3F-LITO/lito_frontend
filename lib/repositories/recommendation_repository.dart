@@ -11,7 +11,7 @@ class RecommendationRepository {
   // Mengirim input parameter air + input kontekstual ke Django API untuk kalkulasi ML
   Future<Recommendation?> requestRecommendation(Map<String, dynamic> payload) async {
     try {
-      final response = await _dio.post('/recommend/', data: payload);
+      final response = await _dio.post('/recommend', data: payload);
       if ((response.statusCode == 200 || response.statusCode == 201) && response.data != null) {
         final recommendation = Recommendation.fromMap(response.data);
         
@@ -30,7 +30,7 @@ class RecommendationRepository {
   // Mengambil riwayat rekomendasi pakan & stres dari SQLite/Django
   Future<List<Recommendation>> fetchHistory(String farmId) async {
     try {
-      final response = await _dio.get('/recommend/', queryParameters: {'farm_id': farmId});
+      final response = await _dio.get('/recommendations/$farmId/');
       if (response.statusCode == 200 && response.data is List) {
         final recommendations = (response.data as List).map((x) => Recommendation.fromMap(x)).toList();
         

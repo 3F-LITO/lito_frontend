@@ -88,10 +88,8 @@ class _RecommendationHistoryState extends State<RecommendationHistory> {
 
   Widget _buildCostBanner() {
     if (_totalFeedCost <= 0) return const SizedBox.shrink();
-    final formatted = _totalFeedCost
-        .toStringAsFixed(0)
-        .replaceAllMapped(
-            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.');
+    final formatted = _totalFeedCost.toStringAsFixed(0).replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.');
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),

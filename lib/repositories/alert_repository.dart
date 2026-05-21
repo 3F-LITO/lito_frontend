@@ -13,7 +13,7 @@ class AlertRepository {
   Future<List<Alert>> fetchAlerts(String farmId) async {
     try {
       final response = await _dio.get(
-        '/alerts/',
+        '/alerts',
         queryParameters: {'farm_id': farmId},
       );
       if (response.statusCode == 200 && response.data is List) {

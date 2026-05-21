@@ -22,7 +22,7 @@ class SensorRepository {
   Future<SensorReadingResult?> fetchLatestReading(String farmId) async {
     try {
       final response = await _dio.get(
-        '/sensors/latest/',
+        '/simulation/latest',
         queryParameters: {'farm_id': farmId},
       );
       if (response.statusCode == 200 && response.data != null) {
@@ -72,7 +72,7 @@ class SensorRepository {
   }) async {
     try {
       final response = await _dio.get(
-        '/sensors/history/',
+        '/simulation/history',
         queryParameters: {'farm_id': farmId, 'hours': hours},
       );
       if (response.statusCode == 200 && response.data is List) {

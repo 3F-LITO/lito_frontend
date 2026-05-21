@@ -14,7 +14,7 @@ class FarmRepository {
   /// Ambil farm aktif: API dulu, fallback SQLite terbaru.
   Future<Farm?> fetchActiveFarm() async {
     try {
-      final response = await _dio.get('/farms/');
+      final response = await _dio.get('/farm/');
       if (response.statusCode == 200 && response.data is List) {
         final list = response.data as List;
         if (list.isNotEmpty) {
@@ -77,7 +77,7 @@ class FarmRepository {
     }
 
     try {
-      final response = await _dio.post('/farms/', data: {
+      final response = await _dio.post('/farm/', data: {
         'name': name,
         'size_m2': sizeM2,
         'shrimp_type': shrimpType,
@@ -122,7 +122,7 @@ class FarmRepository {
       try {
         final farm = Farm.fromMap(row);
         final stockingDate = farm.stockingDate;
-        final response = await _dio.post('/farms/', data: {
+        final response = await _dio.post('/farm/', data: {
           'name': farm.name,
           'size_m2': farm.sizeM2,
           'shrimp_type': farm.shrimpType,

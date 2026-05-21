@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/recommendation_provider.dart';
 import '../../../providers/farm_provider.dart';
 import '../../../core/local/preferences.dart';
+import '../../../repositories/sensor_repository.dart';
 
 class ParameterFormScreen extends StatefulWidget {
   const ParameterFormScreen({super.key});
@@ -17,11 +18,50 @@ class _ParameterFormScreenState extends State<ParameterFormScreen> {
   final _tempCtrl = TextEditingController();
   final _salCtrl = TextEditingController();
   final _phCtrl = TextEditingController();
+  bool _loadingSim = false;
+  final _sensorRepo = SensorRepository();
 
   @override
   void dispose() {
     _doCtrl.dispose(); _tempCtrl.dispose(); _salCtrl.dispose(); _phCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _fillFromSimulation() async {
+    final farmId = Preferences.activeFarmId ?? context.read<FarmProvider>().currentFarm?.id;
+    if (farmId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Farm tidak ditemukan.'), backgroundColor: Color(0xFFDC2626)),
+      );
+      return;
+    }
+    setState(() => _loadingSim = true);
+    final result = await _sensorRepo.fetchLatestReading(farmId);
+    if (!mounted) return;
+    setState(() => _loadingSim = false);
+    if (result != null) {
+      final r = result.reading;
+      _doCtrl.text = r.doLevel.toStringAsFixed(2);
+      _tempCtrl.text = r.temperature.toStringAsFixed(2);
+      _salCtrl.text = r.salinity.toStringAsFixed(2);
+      _phCtrl.text = r.ph.toStringAsFixed(2);
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.isFromCache ? 'Data diisi dari cache lokal.' : 'Data diisi dari simulasi sensor.'),
+          backgroundColor: const Color(0xFF1D9E75),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tidak ada data simulasi. Pastikan simulator berjalan.'),
+          backgroundColor: Color(0xFFD97706),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Color _valColor(double? v, double optMin, double optMax, double warnMin, double warnMax) {
@@ -65,7 +105,7 @@ class _ParameterFormScreenState extends State<ParameterFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = context.watch<RecommendationProvider>().isLoading;
+    final isSubmitting = context.watch<RecommendationProvider>().isSubmitting;
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
@@ -121,7 +161,7 @@ class _ParameterFormScreenState extends State<ParameterFormScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomBar(isLoading),
+      bottomNavigationBar: _buildBottomBar(isSubmitting),
     );
   }
 
@@ -192,20 +232,44 @@ class _ParameterFormScreenState extends State<ParameterFormScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFF1D9E75).withAlpha(40)),
       ),
-      child: const Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.biotech_outlined, color: Color(0xFF1D9E75), size: 28),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Masukkan Hasil Pengukuran',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF111827))),
-                SizedBox(height: 2),
-                Text('Gunakan alat ukur: DO meter, termometer, refraktometer, pH meter',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
-              ],
+          const Row(
+            children: [
+              Icon(Icons.biotech_outlined, color: Color(0xFF1D9E75), size: 28),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Masukkan Hasil Pengukuran',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF111827))),
+                    SizedBox(height: 2),
+                    Text('Gunakan alat ukur: DO meter, termometer, refraktometer, pH meter',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _loadingSim ? null : _fillFromSimulation,
+              icon: _loadingSim
+                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1D9E75)))
+                  : const Icon(Icons.sensors, size: 16, color: Color(0xFF1D9E75)),
+              label: Text(
+                _loadingSim ? 'Mengambil data...' : 'Isi dari Data Simulasi',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1D9E75)),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFF1D9E75)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
             ),
           ),
         ],
