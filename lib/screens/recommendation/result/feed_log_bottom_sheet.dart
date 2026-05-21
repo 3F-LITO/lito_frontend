@@ -50,6 +50,19 @@ class _FeedLogBottomSheetState extends State<FeedLogBottomSheet> {
         Preferences.activeFarmId ??
         '';
 
+    if (farmId.isEmpty) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Farm aktif tidak ditemukan. Kembali ke onboarding lalu pilih tambak.'),
+          backgroundColor: Color(0xFFDC2626),
+        ),
+      );
+      return;
+    }
+
     final log = FeedLog(
       id: const Uuid().v4(),
       farmId: farmId,

@@ -85,7 +85,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               child: Divider(height: 1, color: Colors.grey.shade100),
             ),
           ),
-          body: const AlertHistory(),
+          body: const AlertHistory(showOnlyUnread: true),
         );
       },
     );

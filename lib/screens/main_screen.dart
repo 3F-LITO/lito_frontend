@@ -31,13 +31,6 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    DashboardScreen(),
-    NotificationsScreen(),
-    CycleScreen(),
-    HistoryScreen(),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -66,7 +59,12 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _pages,
+        children: [
+          DashboardScreen(),
+          NotificationsScreen(),
+          CycleScreen(),
+          HistoryScreen(),
+        ],
       ),
       floatingActionButton: _CenterFab(
         onTap: () => Navigator.pushNamed(
