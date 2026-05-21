@@ -9,7 +9,6 @@ import '../../utils/cycle_calculator.dart';
 import 'widgets/parameter_card.dart';
 import 'widgets/pond_health_score.dart';
 import 'widgets/offline_banner.dart';
-import 'daily_log_bottom_sheet.dart';
 import '../alerts/alert_banner.dart';
 import 'widgets/urgency_label.dart';
 import '../main_screen.dart';
@@ -224,17 +223,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         _AlertHistoryLinkButton(
                           onTap: () => MainScreenController.switchTab(1),
                         ),
-                        const SizedBox(height: 24),
-
-                        // Tombol catatan harian
-                        _DailyLogButton(
-                          onTap: () => showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) => const DailyLogBottomSheet(),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -311,44 +299,6 @@ class _QuickActionButton extends StatelessWidget {
               ),
             ),
             const Icon(Icons.chevron_right, color: Color(0xFFD1D5DB), size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Daily log button ─────────────────────────────────────────────────────────
-
-class _DailyLogButton extends StatelessWidget {
-  final VoidCallback onTap;
-  const _DailyLogButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade100),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.edit_note, size: 18, color: Colors.grey.shade500),
-            const SizedBox(width: 8),
-            Text(
-              'Tambah Catatan Harian',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Colors.grey.shade600,
-              ),
-            ),
           ],
         ),
       ),

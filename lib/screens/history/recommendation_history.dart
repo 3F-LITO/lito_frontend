@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -26,6 +27,7 @@ class _RecommendationHistoryState extends State<RecommendationHistory> {
   }
 
   Future<void> _loadTotalCost() async {
+    if (kIsWeb) return; // sqflite tidak support web
     final farmId = Preferences.activeFarmId;
     if (farmId == null) return;
     final total = await DatabaseHelper.instance.getTotalFeedCost(farmId);

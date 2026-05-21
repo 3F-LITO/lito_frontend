@@ -71,7 +71,7 @@ class AlertRepository {
     }
 
     try {
-      await _dio.patch('/alerts/$alertId/read/');
+      await _dio.post('/alerts/$alertId/read/');
     } catch (_) {
       // Offline — local sudah di-update
     }

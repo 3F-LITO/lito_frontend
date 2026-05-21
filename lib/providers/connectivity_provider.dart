@@ -3,12 +3,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../core/network/connectivity_service.dart';
-import '../repositories/daily_log_repository.dart';
 import '../repositories/farm_repository.dart';
 
 class ConnectivityProvider extends ChangeNotifier {
   final ConnectivityService _service = ConnectivityService();
-  final DailyLogRepository _dailyLogRepo = DailyLogRepository();
   final FarmRepository _farmRepo = FarmRepository();
   bool _isOffline = false;
   StreamSubscription? _subscription;
@@ -32,7 +30,6 @@ class ConnectivityProvider extends ChangeNotifier {
 
       // Saat baru kembali online, sync data yang tertunda
       if (wasOffline && !_isOffline && !kIsWeb) {
-        _dailyLogRepo.syncPendingLogs();
         _farmRepo.syncPendingFarms();
       }
     });

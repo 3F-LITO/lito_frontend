@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/local/database_helper.dart';
 import '../../../core/local/preferences.dart';
+import '../../../core/network/dio_client.dart';
 import '../../../models/feed_log.dart';
 import '../../../providers/farm_provider.dart';
 
@@ -58,7 +60,19 @@ class _FeedLogBottomSheetState extends State<FeedLogBottomSheet> {
       notes: _notesCtrl.text.trim(),
     );
 
-    await DatabaseHelper.instance.insertFeedLog(log.toMap());
+    // SQLite hanya di mobile — sqflite tidak support web
+    if (!kIsWeb) {
+      await DatabaseHelper.instance.insertFeedLog(log.toMap());
+    }
+
+    // Sync ke API (fire-and-forget; gagal = tetap tersimpan lokal)
+    try {
+      await DioClient.instance.post('/feed-log', data: {
+        'actual_kg': _actualKg,
+        'recommended_kg': widget.recommendedKg,
+        if (_pricePerKg > 0) 'price_per_kg': _pricePerKg,
+      });
+    } catch (_) {}
 
     if (!mounted) return;
     setState(() {
