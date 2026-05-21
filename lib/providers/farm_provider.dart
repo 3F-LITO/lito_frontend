@@ -7,12 +7,31 @@ class FarmProvider extends ChangeNotifier {
   final FarmRepository _repo = FarmRepository();
 
   Farm? _currentFarm;
+  List<Farm> _allFarms = [];
   bool _isLoading = false;
   String? _error;
 
   Farm? get currentFarm => _currentFarm;
+  List<Farm> get allFarms => _allFarms;
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  /// Muat semua farm dari server/SQLite (untuk picker di onboarding).
+  Future<void> loadAllFarms() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    _allFarms = await _repo.fetchAllFarms();
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  /// Pilih farm yang sudah ada sebagai farm aktif.
+  Future<void> selectFarm(Farm farm) async {
+    _currentFarm = farm;
+    await Preferences.setActiveFarmId(farm.id);
+    notifyListeners();
+  }
 
   /// Muat data farm aktif dari server/SQLite.
   /// Skip jika sudah ada di memory — hindari overwrite saat tab switch.

@@ -41,9 +41,21 @@ class RecommendationProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
+    // Default contextual values — fallback jika user skip contextual form
+    // atau state reset karena page refresh di web.
+    final defaultContextual = <String, dynamic>{
+      'water_color': 0,
+      'shrimp_condition': 0,
+      'appetite': 0,
+      'weather': 0,
+      'pond_bottom': 0,
+      'doc': 30,
+    };
+
     final payload = <String, dynamic>{
       'farm_id': farmId,
-      ..._pendingContextual,
+      ...defaultContextual,
+      ..._pendingContextual, // override dengan nilai aktual jika ada
       ..._pendingParameters,
     };
 

@@ -46,6 +46,36 @@ class FarmRepository {
     return null;
   }
 
+  /// Ambil semua farm dari API, fallback ke SQLite.
+  Future<List<Farm>> fetchAllFarms() async {
+    try {
+      final response = await _dio.get('/farm/');
+      if (response.statusCode == 200 && response.data is List) {
+        final list = response.data as List;
+        final farms =
+            list.map((e) => Farm.fromMap(e as Map<String, dynamic>)).toList();
+        if (!kIsWeb && farms.isNotEmpty) {
+          final db = await _dbHelper.database;
+          for (final farm in farms) {
+            await db.insert(
+              'farms',
+              {...farm.toMap(), 'is_synced': 1},
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+        }
+        return farms;
+      }
+    } catch (_) {}
+
+    if (!kIsWeb) {
+      final db = await _dbHelper.database;
+      final maps = await db.query('farms', orderBy: 'created_at DESC');
+      return maps.map((m) => Farm.fromMap(m)).toList();
+    }
+    return [];
+  }
+
   /// Buat farm baru: simpan ke SQLite dulu (is_synced=0), lalu POST API.
   /// Jika API berhasil, update is_synced=1 dan gunakan ID dari server.
   Future<Farm> createFarm({
