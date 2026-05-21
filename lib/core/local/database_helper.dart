@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -98,6 +98,43 @@ class DatabaseHelper {
 
     // 5. Tabel Daily Logs (Fase 2.6)
     await _createDailyLogsTable(db);
+
+    // 6. Tabel Feed Logs (F1.7-F1.9)
+    await _createFeedLogsTable(db);
+  }
+
+  Future<void> _createFeedLogsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS feed_logs (
+        id TEXT PRIMARY KEY,
+        farm_id TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        recommended_kg REAL NOT NULL,
+        actual_kg REAL NOT NULL,
+        price_per_kg REAL NOT NULL,
+        notes TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<List<Map<String, dynamic>>> getFeedLogs(String farmId) async {
+    final db = await instance.database;
+    return db.query('feed_logs',
+        where: 'farm_id = ?', whereArgs: [farmId], orderBy: 'timestamp DESC');
+  }
+
+  Future<void> insertFeedLog(Map<String, dynamic> row) async {
+    final db = await instance.database;
+    await db.insert('feed_logs', row, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<double> getTotalFeedCost(String farmId) async {
+    final db = await instance.database;
+    final result = await db.rawQuery(
+      'SELECT SUM(actual_kg * price_per_kg) as total FROM feed_logs WHERE farm_id = ?',
+      [farmId],
+    );
+    return (result.first['total'] as num? ?? 0).toDouble();
   }
 
   Future<void> _createDailyLogsTable(Database db) async {
@@ -122,6 +159,9 @@ class DatabaseHelper {
       await db.execute(
         'ALTER TABLE farms ADD COLUMN is_synced INTEGER NOT NULL DEFAULT 0',
       );
+    }
+    if (oldVersion < 4) {
+      await _createFeedLogsTable(db);
     }
   }
 

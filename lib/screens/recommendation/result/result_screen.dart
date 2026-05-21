@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/recommendation_provider.dart';
 import '../../../models/recommendation.dart';
+import 'feed_log_bottom_sheet.dart';
 
 class ResultScreen extends StatelessWidget {
   const ResultScreen({super.key});
@@ -51,6 +52,8 @@ class ResultScreen extends StatelessWidget {
                 const SizedBox(height: 14),
                 _buildFeedDoseCard(rec, color),
                 const SizedBox(height: 14),
+                if (rec.feedDoseKg > 0) _buildFeedLogButton(context, rec),
+                if (rec.feedDoseKg > 0) const SizedBox(height: 14),
                 _buildActionsCard(rec, color),
                 const SizedBox(height: 14),
                 _buildShapCard(rec),
@@ -101,6 +104,37 @@ class ResultScreen extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFeedLogButton(BuildContext context, Recommendation rec) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (_) => FeedLogBottomSheet(recommendedKg: rec.feedDoseKg),
+        ),
+        icon: const Icon(Icons.set_meal, color: Color(0xFF1D9E75), size: 18),
+        label: const Text(
+          'Catat Realisasi Pakan',
+          style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: Color(0xFF1D9E75)),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFF1D9E75), width: 1.5),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          backgroundColor: Colors.white,
+        ),
       ),
     );
   }
