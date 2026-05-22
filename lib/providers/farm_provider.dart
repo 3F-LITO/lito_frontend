@@ -41,7 +41,24 @@ class FarmProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
-    _currentFarm = await _repo.fetchActiveFarm();
+    final preferredFarmId = Preferences.activeFarmId;
+
+    // Prioritas: farm yang dipilih user terakhir (activeFarmId)
+    if (preferredFarmId != null && preferredFarmId.isNotEmpty) {
+      final farms = await _repo.fetchAllFarms();
+      if (farms.isNotEmpty) {
+        _allFarms = farms;
+        for (final farm in farms) {
+          if (farm.id == preferredFarmId) {
+            _currentFarm = farm;
+            break;
+          }
+        }
+      }
+    }
+
+    // Fallback: farm terbaru dari API jika activeFarmId tidak ditemukan
+    _currentFarm ??= await _repo.fetchActiveFarm();
 
     // Simpan farm ID ke preferences agar dipakai provider lain
     if (_currentFarm != null) {
